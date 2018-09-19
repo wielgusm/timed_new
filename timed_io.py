@@ -261,4 +261,41 @@ def get_lcamp(tobs,quadrangle,polar='none'):
     return foo_out
 
 
-#def synthetic_L
+def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],get_pol=['LL','RR'],min_elem=100.,cadence=-1):
+
+    for pol in get_pol:
+        tobs = load_uvfits(pathf,tcoh=cadence,polar=pol)
+        stations = list(set(''.join(tobs.df.baseline)))
+        stations = [x for x in stations if x!='R']
+
+        if 'AMP' in get_what:
+            print('Saving visibility amplitudes time series...')
+            if not os.path.exists(path_out+'AMP'):
+                os.makedirs(path_out+'AMP') 
+            baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
+            for base in baseL:
+                tseries = tseries(tobs,base)
+                if len(tseries.mjd)>min_elem:
+                    tseries.save_csv(path_out+'AMP/'+special_name+tseries.source+'_'+base+'_'+pol+'.csv')
+
+        if 'CP' in get_what:
+            print('Saving closure phase time series...')
+            if not os.path.exists(path_out+'CP'):
+                os.makedirs(path_out+'CP') 
+            triangleL=sorted([x[0]+x[1]+x[2] for x in itertools.combinations(stations,3)])
+            for tri in triangleL:
+                tseries = tseries(tobs,tri)
+                if len(tseries.mjd)>min_elem:
+                    tseries.save_csv(path_out+'CP/'+special_name+tseries.source+'_'+tri+'_'+pol+'.csv')
+
+        if 'LCA' in get_what:
+            print('Saving log closure amplitude time series...')
+            if not os.path.exists(path_out+'LCA'):
+                os.makedirs(path_out+'LCA') 
+            quadrangleL1=sorted([x[0]+x[1]+x[2]+x[3] for x in itertools.combinations(stations,4)])
+            quadrangleL2=sorted([x[0]+x[3]+x[1]+x[2] for x in itertools.combinations(stations,4)])
+            quadrangleL=quadrangleL1+quadrangleL2
+            for quad in quadrangleL:
+                tseries = tseries(tobs,quad)
+                if len(tseries.mjd)>min_elem:
+                    tseries.save_csv(path_out+'LCA/'+special_name+tseries.source+'_'+quad+'_'+pol+'.csv')
