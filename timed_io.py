@@ -2,7 +2,8 @@ import sys, os, itertools
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import qmetric
+#import qmetric
+from timed_new import qmetric
 from astropy.time import Time
 import datetime as datetime
 try:
@@ -54,6 +55,9 @@ class tobsdata:
         self.dec=obs.dec
         self.data=obs.data
         self.mjd=obs.mjd
+
+    def get_tseries(self,ident,product='',polar='none'):
+        return tseries(self,ident,product=product,polar=polar) 
     
 class tseries:
     def __init__(self,tobs,ident,product='',polar='none'):      
@@ -149,17 +153,18 @@ class tseries:
 
         if show_normal:
             plt.axvline(0,color='k',linestyle='--')
-            x = np.linspace(binL, binR,128)
-            plt.plot(x,1/np.sqrt(2.*np.pi)*np.exp(-x**2/2.),'k--')
+            xg = np.linspace(binL, binR,128)
+            plt.plot(xg,1/np.sqrt(2.*np.pi)*np.exp(-xg**2/2.),'k--')
 
         plt.title(self.ident)
         plt.grid()
         plt.show()
         print('MAD0: ', 1.4826*np.median(np.abs(rel_cl)))
-        print('MAD0 ABSOLUTE: ',np.median(np.abs(x)))
+        print('MEDIAN ABSOLUTE: ',np.median(np.abs(x)))
         print('MEDIAN NORMALIZED: ', np.median(rel_cl))
         print('MEDIAN ABSOLUTE:',np.median(x))
         print('MEDIAN THERMAL ERROR: ', np.median(err))
+        print('VARIATION: ',np.std(x) )
         
     def qmetric(self):
 
@@ -364,10 +369,12 @@ def round_time(t,round_s=0.1):
     return round_t
 
 
-def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],get_pol=['LL','RR'],min_elem=100.,cadence=-1):
+def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],get_pol=['LL','RR'],min_elem=100.,cadence=-1,polrep='stokes'):
 
+    if get_pol==None: get_pol=[None]
     for pol in get_pol:
-        tobs = load_uvfits(pathf,tcoh=cadence,polar=pol)
+        tobs = load_uvfits(pathf,tcoh=cadence,polar=pol,polrep=polrep)
+        if pol==None: pol=''
         stations = list(set(''.join(tobs.df.baseline)))
         stations = [x for x in stations if x!='R']
 
@@ -379,7 +386,7 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
             for base in baseL:
                 tser = tseries(tobs,base)
                 if len(tser.mjd)>min_elem:
-                    tser.save_csv(path_out+'AMP/'+special_name+tser.source+'_'+base+'_'+pol+'.csv')
+                    tser.save_csv(path_out+'AMP/'+special_name+'_'+tser.source+'_'+base+'_'+pol+'.csv')
 
         if 'CP' in get_what:
             print('Saving closure phase time series...')
@@ -389,7 +396,7 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
             for tri in triangleL:
                 tser = tseries(tobs,tri)
                 if len(tser.mjd)>min_elem:
-                    tser.save_csv(path_out+'CP/'+special_name+tser.source+'_'+tri+'_'+pol+'.csv')
+                    tser.save_csv(path_out+'CP/'+special_name+'_'+tser.source+'_'+tri+'_'+pol+'.csv')
 
         if 'LCA' in get_what:
             print('Saving log closure amplitude time series...')
@@ -401,4 +408,4 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
             for quad in quadrangleL:
                 tser = tseries(tobs,quad)
                 if len(tser.mjd)>min_elem:
-                    tser.save_csv(path_out+'LCA/'+special_name+tser.source+'_'+quad+'_'+pol+'.csv')
+                    tser.save_csv(path_out+'LCA/'+special_name+'_'+tser.source+'_'+quad+'_'+pol+'.csv')
