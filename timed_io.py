@@ -377,9 +377,9 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
                 os.makedirs(path_out+'AMP') 
             baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
             for base in baseL:
-                tseries = tseries(tobs,base)
-                if len(tseries.mjd)>min_elem:
-                    tseries.save_csv(path_out+'AMP/'+special_name+tseries.source+'_'+base+'_'+pol+'.csv')
+                tser = tseries(tobs,base)
+                if len(tser.mjd)>min_elem:
+                    tser.save_csv(path_out+'AMP/'+special_name+tser.source+'_'+base+'_'+pol+'.csv')
 
         if 'CP' in get_what:
             print('Saving closure phase time series...')
@@ -387,9 +387,9 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
                 os.makedirs(path_out+'CP') 
             triangleL=sorted([x[0]+x[1]+x[2] for x in itertools.combinations(stations,3)])
             for tri in triangleL:
-                tseries = tseries(tobs,tri)
-                if len(tseries.mjd)>min_elem:
-                    tseries.save_csv(path_out+'CP/'+special_name+tseries.source+'_'+tri+'_'+pol+'.csv')
+                tser = tseries(tobs,tri)
+                if len(tser.mjd)>min_elem:
+                    tser.save_csv(path_out+'CP/'+special_name+tser.source+'_'+tri+'_'+pol+'.csv')
 
         if 'LCA' in get_what:
             print('Saving log closure amplitude time series...')
@@ -399,6 +399,6 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
             quadrangleL2=sorted([x[0]+x[3]+x[1]+x[2] for x in itertools.combinations(stations,4)])
             quadrangleL=quadrangleL1+quadrangleL2
             for quad in quadrangleL:
-                tseries = tseries(tobs,quad)
-                if len(tseries.mjd)>min_elem:
-                    tseries.save_csv(path_out+'LCA/'+special_name+tseries.source+'_'+quad+'_'+pol+'.csv')
+                tser = tseries(tobs,quad)
+                if len(tser.mjd)>min_elem:
+                    tser.save_csv(path_out+'LCA/'+special_name+tser.source+'_'+quad+'_'+pol+'.csv')
