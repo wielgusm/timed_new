@@ -1,11 +1,14 @@
 import sys
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import qmetric
+from astropy.time import Time
+import datetime as datetime
 try:
     import ehtim as eh
 except ModuleNotFoundError:
-    sys.path.append('/Volumes/DATAPEN/Shared/EHT/EHTIM/eht-imaging_fork/eht-imaging/')
+    sys.path.append('/Volumes/DATAPEN/Shared/EHT/EHTIM/eht-imaging_polrep/eht-imaging/')
 import ehtim as eh
 
 nam2lett = {'ALMA':'A','AA':'A','A':'A',
@@ -18,13 +21,19 @@ nam2lett = {'ALMA':'A','AA':'A','A':'A',
             'SMAP':'S','SMA':'S','SM':'S','S':'S',
             'SMAR':'R','R':'R','SR':'R',
             'B':'B','C':'C','D':'D'}
+pol_dic={'LL':'ll','ll':'ll','L':'ll',
+        'RR':'rr','rr':'rr','R':'rr',
+        'RL':'rl','rl':'rl',
+        'LR':'lr','lr':'lr'}
 
-
-def load_uvfits(path_to_data,tcoh=-1,single_letter=True,polar=None):
+def load_uvfits(path_to_data,tcoh=-1,single_letter=True,polrep='circ',polar=None):
     if polar=='LL':polar='L'
     if polar=='RR':polar='R'
-    obs = eh.obsdata.load_uvfits(path_to_data,force_singlepol=polar)
+    obs = eh.obsdata.load_uvfits(path_to_data,polrep=polrep,force_singlepol=polar)
+    #if full_polar: obs.df = make_df_full_cp(obs)
+    #else: obs.df = eh.statistics.dataframes.make_df(obs)
     obs.df = eh.statistics.dataframes.make_df(obs)
+    hm.data = hm.data.dropna(subset=['rrvis', 'llvis','rrsigma','llsigma'])
     if (tcoh > 0):
         obs = obs.avg_coherent(inttime=tcoh)
     tobs=tobsdata(obs,single_letter=single_letter)
@@ -57,19 +66,21 @@ class tseries:
         self.polarization = polar
         self.source = tobs.source
         if product=='amp':
-            if polar=='none':
-                foo = tobs.df[(tobs.df.baseline==ident) | (tobs.df.baseline==ident[1]+ident[0])]
-            else:
-                foo = tobs.df[(tobs.df.polarization==polar)&((tobs.df.baseline==ident) | (tobs.df.baseline==ident[1]+ident[0]))]
-            #print(foo)
+            foo = tobs.df[(tobs.df.baseline==ident) | (tobs.df.baseline==ident[1]+ident[0])]
+            if polar != 'none':
+                polamp=pol_dic[polar]+'amp'
+                polsigma=pol_dic[polar]+'sigma'
+            else: polamp='amp'; polsigma='sigma'
+            foo=foo[foo[polamp]==foo[polamp]].copy()
             self.mjd = np.asarray(foo.mjd)
             self.time = np.asarray(foo.time)
-            self.amp = np.asarray(foo.amp)
-            self.sigma = np.asarray(foo.sigma)
+            self.amp = np.asarray(foo[polamp])
+            self.sigma = np.asarray(foo[polsigma])
             self.data = foo
 
         elif product=='cphase':
             foo = get_cphase(tobs,ident,polar=polar)
+            foo=foo[foo.cphase==foo.cphase].copy()
             self.mjd = np.asarray(foo.mjd)
             self.time = np.asarray(foo.time)
             self.cphase = np.asarray(foo.cphase)
@@ -78,13 +89,15 @@ class tseries:
 
         elif product=='lcamp':
             foo = get_lcamp(tobs,ident,polar=polar)
+            #if polar!='none': foo = foo.dropna(subset=[polamp])
+            foo=foo[foo.lcamp==foo.lcamp].copy()
             self.mjd = np.asarray(foo.mjd)
             self.time = np.asarray(foo.time)
             self.lcamp = np.asarray(foo.lcamp)
             self.sigmaLCA = np.asarray(foo.sigmaLCA)
             self.data = foo
 
-    def plot(self,line=False,figsize=''):
+    def plot(self,line=False,figsize='',errorscale=1.):
         if figsize=='':
             plt.figure(figsize=(10,5))
         else:
@@ -93,13 +106,13 @@ class tseries:
         else: fmt='o'
         plt.title(self.ident)
         if self.type=='cphase':
-            plt.errorbar(self.time,self.cphase,self.sigmaCP,fmt=fmt,capsize=5)
+            plt.errorbar(self.time,self.cphase,errorscale*self.sigmaCP,fmt=fmt,capsize=5)
             plt.ylabel('cphase [deg]')
         elif self.type=='amp':
-            plt.errorbar(self.time,self.amp,self.sigma,fmt=fmt,capsize=5)
+            plt.errorbar(self.time,self.amp,errorscale*self.sigma,fmt=fmt,capsize=5)
             plt.ylabel('amp')
         elif self.type=='lcamp':
-            plt.errorbar(self.time,self.lcamp,self.sigmaLCA,fmt=fmt,capsize=5)
+            plt.errorbar(self.time,self.lcamp,errorscale*self.sigmaLCA,fmt=fmt,capsize=5)
             plt.ylabel('log camp')
         plt.grid()
         plt.xlabel('time [h]')
@@ -125,7 +138,7 @@ class tseries:
             err=self.sigma
             rel_cl = (self.amp-np.mean(self.amp))/self.sigma
             plt.xlabel('(amp - mean amp) / (estimated error)')
-
+        
         binL = np.percentile(rel_cl,perc)
         binR = np.percentile(rel_cl,100.-perc)
         binDist = np.abs(binR-binL)
@@ -174,9 +187,11 @@ class tseries:
 
 
 def get_cphase(tobs,triangle,polar='none'):
-    
     if polar != 'none':
-        tobs.df=tobs.df[tobs.df.polarization==polar].copy()
+        polvis=pol_dic[polar]+'vis'
+        polsnr=pol_dic[polar]+'snr'
+    else: polvis='vis'; polsnr='snr'
+    #    tobs.df=tobs.df[tobs.df.polarization==polar].copy()
     baseL=list(tobs.df.baseline.unique())
     #determine order stations
     b=[triangle[0]+triangle[1],triangle[1]+triangle[2],triangle[2]+triangle[0]]   
@@ -197,24 +212,28 @@ def get_cphase(tobs,triangle,polar='none'):
     fooB1=foo[foo.baseline==baseT[1]].sort_values('mjd').copy()
     fooB2=foo[foo.baseline==baseT[2]].sort_values('mjd').copy()
     foo_out=fooB0[['time','datetime','mjd']].copy()
+
     foo_out['u1'] = np.asarray(fooB0['u'])
     foo_out['v1'] = np.asarray(fooB0['v'])
-    foo_out['vis1'] = np.asarray(fooB0['vis'])
+    foo_out['vis1'] = np.asarray(fooB0[polvis])
     if sign[0]==-1:
         foo_out['vis1'] = np.asarray(foo_out['vis1']).conj()
-    foo_out['snr1'] = np.asarray(fooB0['snr'])
+    foo_out['snr1'] = np.asarray(fooB0[polsnr])
+
     foo_out['u2'] = np.asarray(fooB1['u'])
     foo_out['v2'] = np.asarray(fooB1['v'])
-    foo_out['vis2'] = np.asarray(fooB1['vis'])
+    foo_out['vis2'] = np.asarray(fooB1[polvis])
     if sign[1]==-1:
         foo_out['vis2'] = np.asarray(foo_out['vis2']).conj()
-    foo_out['snr2'] = np.asarray(fooB1['snr'])
+    foo_out['snr2'] = np.asarray(fooB1[polsnr])
+
     foo_out['u3'] = np.asarray(fooB2['u'])
     foo_out['v3'] = np.asarray(fooB2['v'])
-    foo_out['vis3'] = np.asarray(fooB2['vis'])
+    foo_out['vis3'] = np.asarray(fooB2[polvis])
     if sign[2]==-1:
         foo_out['vis3'] = np.asarray(foo_out['vis3']).conj()
-    foo_out['snr3'] = np.asarray(fooB2['snr'])
+    foo_out['snr3'] = np.asarray(fooB2[polsnr])
+
     foo_out['cphase'] = (180./np.pi)*np.angle( foo_out['vis1']* foo_out['vis2']*foo_out['vis3'])
     foo_out['sigmaCP'] = (180./np.pi)*np.sqrt(1./foo_out['snr1']**2 + 1./foo_out['snr2']**2 + 1./foo_out['snr3']**2)
     
@@ -223,9 +242,10 @@ def get_cphase(tobs,triangle,polar='none'):
 
             
 def get_lcamp(tobs,quadrangle,polar='none'):
-    
     if polar != 'none':
-        tobs.df=tobs.df[tobs.df.polarization==polar].copy()
+        polvis=pol_dic[polar]+'vis'
+        polsnr=pol_dic[polar]+'snr'
+    else: polvis='vis'; polsnr='snr'
     baseL=list(tobs.df.baseline.unique())
     b=[quadrangle[0]+quadrangle[1],quadrangle[2]+quadrangle[3],quadrangle[0]+quadrangle[2],quadrangle[1]+quadrangle[3]]  
     baseQ=b
@@ -241,24 +261,107 @@ def get_lcamp(tobs,quadrangle,polar='none'):
     foo_out=fooB0[['time','datetime','mjd']].copy()
     foo_out['u1'] = np.asarray(fooB0['u'])
     foo_out['v1'] = np.asarray(fooB0['v'])
-    foo_out['vis1'] = np.asarray(fooB0['vis'])
-    foo_out['snr1'] = np.asarray(fooB0['snr'])
+    foo_out['vis1'] = np.asarray(fooB0[polvis])
+    foo_out['snr1'] = np.asarray(fooB0[polsnr])
     foo_out['u2'] = np.asarray(fooB1['u'])
     foo_out['v2'] = np.asarray(fooB1['v'])
-    foo_out['vis2'] = np.asarray(fooB1['vis'])
-    foo_out['snr2'] = np.asarray(fooB1['snr'])
+    foo_out['vis2'] = np.asarray(fooB1[polvis])
+    foo_out['snr2'] = np.asarray(fooB1[polsnr])
     foo_out['u3'] = np.asarray(fooB2['u'])
     foo_out['v3'] = np.asarray(fooB2['v'])
-    foo_out['vis3'] = np.asarray(fooB2['vis'])
-    foo_out['snr3'] = np.asarray(fooB2['snr'])
+    foo_out['vis3'] = np.asarray(fooB2[polvis])
+    foo_out['snr3'] = np.asarray(fooB2[polsnr])
     foo_out['u4'] = np.asarray(fooB3['u'])
     foo_out['v4'] = np.asarray(fooB3['v'])
-    foo_out['vis4'] = np.asarray(fooB3['vis'])
-    foo_out['snr4'] = np.asarray(fooB3['snr'])
+    foo_out['vis4'] = np.asarray(fooB3[polvis])
+    foo_out['snr4'] = np.asarray(fooB3[polsnr])
     foo_out['lcamp'] = np.log(np.abs(foo_out['vis1'])) + np.log(np.abs(foo_out['vis2'])) - np.log(np.abs(foo_out['vis3'])) - np.log(np.abs(foo_out['vis4']))
     foo_out['sigmaLCA'] = np.sqrt(1./foo_out['snr1']**2 + 1./foo_out['snr2']**2 + 1./foo_out['snr3']**2 + 1./foo_out['snr4']**2)
     
     return foo_out
+
+
+
+def make_df_full_cp(obs,round_s=0.1):
+
+    """converts visibilities from obs.data to DataFrame format
+
+    Args:
+        obs: ObsData object
+        round_s: accuracy of datetime object in seconds
+        polarization: just label for polarization
+        save_polar: what to do about different polarizations, if
+
+    Returns:
+        df: observation visibility data in DataFrame format
+    """
+    sour=obs.source
+    df = pd.DataFrame(data=obs.data)
+    df['fmjd'] = df['time']/24.
+    df['mjd'] = obs.mjd + df['fmjd']
+    telescopes = list(zip(df['t1'],df['t2']))
+    telescopes = [(x[0],x[1]) for x in telescopes]
+    df['baseline'] = [x[0]+'-'+x[1] for x in telescopes]
+    df['amp'] = list(map(np.abs,df['vis']))
+    df['phase'] = list(map(lambda x: (180./np.pi)*np.angle(x),df['vis']))
+    df['datetime'] = Time(df['mjd'], format='mjd').datetime
+    df['datetime'] =list(map(lambda x: round_time(x,round_s=round_s),df['datetime']))
+    df['jd'] = Time(df['mjd'], format='mjd').jd
+    #df['snr'] = df['amp']/df['sigma']
+    quantities=['llamp','rramp','rlamp','lramp','llsigma','rrsigma','rlsigma','lrsigma','rrphase','llphase','rlphase','lrphase']
+    for quantity in quantities:
+        df[quantity] = [x[0] for x in obs.unpack(quantity)]
+    df['source'] = sour
+    df['baselength'] = np.sqrt(np.asarray(df.u)**2+np.asarray(df.v)**2)
+    basic_columns = list(set(df.columns)-set(quantities))
+    dfrr=df[basic_columns+['rramp','rrphase','rrsigma']].copy()
+    dfrr['amp']=dfrr['rramp']
+    dfrr['phase']=dfrr['rrphase']
+    dfrr['sigma']=dfrr['rrsigma']
+    dfrr=dfrr[basic_columns]
+    dfrr['polarization']='RR'
+    dfll=df[basic_columns+['llamp','llphase','llsigma']].copy()
+    dfll['amp']=dfll['llamp']
+    dfll['phase']=dfll['llphase']
+    dfll['sigma']=dfll['llsigma']
+    dfll=dfll[basic_columns]
+    dfll['polarization']='LL'
+    dflr=df[basic_columns+['lramp','lrphase','lrsigma']].copy()
+    dflr['amp']=dflr['lramp']
+    dflr['phase']=dflr['lrphase']
+    dflr['sigma']=dflr['lrsigma']
+    dflr=dflr[basic_columns]
+    dflr['polarization']='LR'
+    dfrl=df[basic_columns+['rlamp','rlphase','rlsigma']].copy()
+    dfrl['amp']=dfrl['rlamp']
+    dfrl['phase']=dfrl['rlphase']
+    dfrl['sigma']=dfrl['rlsigma']
+    dfrl=dfrl[basic_columns]
+    dfrl['polarization']='RL'
+
+    df = pd.concat()
+    return df
+
+def round_time(t,round_s=0.1):
+
+    """rounding time to given accuracy
+
+    Args:
+        t: time
+        round_s: delta time to round to in seconds
+
+    Returns:
+        round_t: rounded time
+    """
+    t0 = datetime.datetime(t.year,1,1)
+    foo = t - t0
+    foo_s = foo.days*24*3600 + foo.seconds + foo.microseconds*(1e-6)
+    foo_s = np.round(foo_s/round_s)*round_s
+    days = np.floor(foo_s/24/3600)
+    seconds = np.floor(foo_s - 24*3600*days)
+    microseconds = int(1e6*(foo_s - days*3600*24 - seconds))
+    round_t = t0+datetime.timedelta(days,seconds,microseconds)
+    return round_t
 
 
 def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],get_pol=['LL','RR'],min_elem=100.,cadence=-1):
