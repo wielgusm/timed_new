@@ -29,7 +29,8 @@ pol_dic={'LL':'ll','ll':'ll','L':'ll',
 def load_uvfits(path_to_data,tcoh=-1,single_letter=True,polrep='circ',polar=None):
     if polar=='LL':polar='L'
     if polar=='RR':polar='R'
-    obs = eh.obsdata.load_uvfits(path_to_data,polrep=polrep,force_singlepol=polar)
+    try: obs = eh.obsdata.load_uvfits(path_to_data,polrep=polrep,force_singlepol=polar)
+    except TypeError: obs = eh.obsdata.load_uvfits(path_to_data,force_singlepol=polar)
     #if full_polar: obs.df = make_df_full_cp(obs)
     #else: obs.df = eh.statistics.dataframes.make_df(obs)
     obs.df = eh.statistics.dataframes.make_df(obs)
