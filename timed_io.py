@@ -34,7 +34,6 @@ def load_uvfits(path_to_data,tcoh=-1,single_letter=True,polrep='circ',polar=None
     #if full_polar: obs.df = make_df_full_cp(obs)
     #else: obs.df = eh.statistics.dataframes.make_df(obs)
     obs.df = eh.statistics.dataframes.make_df(obs)
-    hm.data = hm.data.dropna(subset=['rrvis', 'llvis','rrsigma','llsigma'])
     if (tcoh > 0):
         obs = obs.avg_coherent(inttime=tcoh)
     tobs=tobsdata(obs,single_letter=single_letter)
