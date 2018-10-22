@@ -99,8 +99,8 @@ class tseries:
             elif len(ident)==3: product='cphase'
             elif len(ident)==4: product='lcamp'
         self.product=product
-        if product=='csv':
-            self.type=csv_product
+        if product=='csv': self.type=csv_product
+        else: self.type=product
         self.ident = ident
         self.polarization = polar
         self.source = tobs.source
