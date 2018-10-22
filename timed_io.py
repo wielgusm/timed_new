@@ -35,8 +35,18 @@ def load_uvfits(path_to_data,tcoh=-1,single_letter=True,polrep='circ',polar=None
     #if full_polar: obs.df = make_df_full_cp(obs)
     #else: obs.df = eh.statistics.dataframes.make_df(obs)
     obs.df = eh.statistics.dataframes.make_df(obs)
-    if (tcoh > 0):
-        obs = obs.avg_coherent(inttime=tcoh)
+    if (type(tcoh)!=str):
+        if (tcoh > 0):
+            obs = obs.avg_coherent(inttime=tcoh)
+    else:
+        if tcoh=='scan':
+            try: 
+                foo = len(obs.scan)
+            except: 
+                print('Adding scans automatically')
+                obs.add_scans()
+                obs = obs.avg_coherent(inttime=1,scan_avg=True)
+            
     tobs=tobsdata(obs,single_letter=single_letter)
     return tobs
 
@@ -55,6 +65,10 @@ class tobsdata:
         self.dec=obs.dec
         self.data=obs.data
         self.mjd=obs.mjd
+        try: self.polrep=obs.polrep
+        except AttributeError: pass
+        try: self.scans=obs.scans
+        except: pass
 
     def get_tseries(self,ident,product='',polar='none'):
         return tseries(self,ident,product=product,polar=polar) 
@@ -69,6 +83,8 @@ class tseries:
         self.ident = ident
         self.polarization = polar
         self.source = tobs.source
+        self.ra=tobs.ra
+        self.dec=tobs.dec
         if product=='amp':
             foo = tobs.df[(tobs.df.baseline==ident) | (tobs.df.baseline==ident[1]+ident[0])]
             if polar != 'none':
@@ -101,6 +117,26 @@ class tseries:
             self.sigmaLCA = np.asarray(foo.sigmaLCA)
             self.data = foo
 
+        elif product=='lcfrac':
+            foo = get_lcfrac(tobs,ident)
+            #if polar!='none': foo = foo.dropna(subset=[polamp])
+            foo=foo[foo.lcfrac==foo.lcfrac].copy()
+            self.mjd = np.asarray(foo.mjd)
+            self.time = np.asarray(foo.time)
+            self.lcfrac = np.asarray(foo.lcfrac)
+            self.sigmaLCF = np.asarray(foo.sigmaLCF)
+            self.data = foo
+
+        elif product=='cfrac':
+            foo = get_cfrac(tobs,ident)
+            #if polar!='none': foo = foo.dropna(subset=[polamp])
+            foo=foo[foo.cfrac==foo.cfrac].copy()
+            self.mjd = np.asarray(foo.mjd)
+            self.time = np.asarray(foo.time)
+            self.cfrac = np.asarray(foo.cfrac)
+            self.sigmaCF = np.asarray(foo.sigmaCF)
+            self.data = foo
+
     def plot(self,line=False,figsize='',errorscale=1.):
         if figsize=='':
             plt.figure(figsize=(10,5))
@@ -118,6 +154,12 @@ class tseries:
         elif self.type=='lcamp':
             plt.errorbar(self.time,self.lcamp,errorscale*self.sigmaLCA,fmt=fmt,capsize=5)
             plt.ylabel('log camp')
+        elif self.type=='lcfrac':
+            plt.errorbar(self.time,self.lcfrac,errorscale*self.sigmaLCF,fmt=fmt,capsize=5)
+            plt.ylabel('log cfracpol')
+        elif self.type=='cfrac':
+            plt.errorbar(self.time,self.cfrac,errorscale*self.sigmaCF,fmt=fmt,capsize=5)
+            plt.ylabel('cfracpol')
         plt.grid()
         plt.xlabel('time [h]')
         plt.show()
@@ -188,6 +230,10 @@ class tseries:
                 columns=['mjd','cphase','sigmaCP']
             elif self.type=='lcamp':
                 columns=['mjd','lcamp','sigmaLCA']    
+            elif self.type=='lcfrac':
+                columns=['mjd','lcfrac','sigmaLCF'] 
+            elif self.type=='cfrac':
+                columns=['mjd','cfrac','sigmaCF'] 
         self.data[columns].to_csv(name_out,index=False,header=header,sep=sep)
 
 
@@ -285,8 +331,43 @@ def get_lcamp(tobs,quadrangle,polar='none'):
     
     return foo_out
 
+def get_lcfrac(tobs,baseline):
+   
+    baseL=list(tobs.df.baseline.unique())
+    if baseline not in baseL:
+        if baseline[1]+baseline[0] in baseL:
+            print('Using transposed baseline')
+            baseline=baseline[1]+baseline[0]
+        else: print('No such baseline')
+    foo = tobs.df[tobs.df.baseline==baseline]
+    if tobs.polrep=='circ':
+        foo.dropna(axis=0, subset=['rrvis','rlvis','llvis','lrvis','rrsigma','llsigma','lrsigma','rlsigma','rrsnr','llsnr','lrsnr','rlsnr'], inplace=True)
+        foo_out=foo[['time','datetime','mjd']].copy()
+        foo_out['u'] = np.asarray(foo['u'])
+        foo_out['v'] = np.asarray(foo['v'])
+        foo_out['lcfrac'] = np.log(np.abs(foo['rlvis'])) + np.log(np.abs(foo['lrvis'])) - np.log(np.abs(foo['rrvis'])) - np.log(np.abs(foo['llvis']))
+        foo_out['sigmaLCF'] = np.sqrt(1./foo['llsnr']**2 + 1./foo['rrsnr']**2 + 1./foo['lrsnr']**2 + 1./foo['rlsnr']**2)
+    return foo_out
 
+def get_cfrac(tobs,baseline):
+   
+    baseL=list(tobs.df.baseline.unique())
+    if baseline not in baseL:
+        if baseline[1]+baseline[0] in baseL:
+            print('Using transposed baseline')
+            baseline=baseline[1]+baseline[0]
+        else: print('No such baseline')
+    foo = tobs.df[tobs.df.baseline==baseline]
+    if tobs.polrep=='circ':
+        foo.dropna(axis=0, subset=['rrvis','rlvis','llvis','lrvis','rrsigma','llsigma','lrsigma','rlsigma','rrsnr','llsnr','lrsnr','rlsnr'], inplace=True)
+        foo_out=foo[['time','datetime','mjd']].copy()
+        foo_out['u'] = np.asarray(foo['u'])
+        foo_out['v'] = np.asarray(foo['v'])
+        foo_out['cfrac'] = np.sqrt((np.abs(foo['rlvis']))*(np.abs(foo['lrvis']))/(np.abs(foo['rrvis']))/(np.abs(foo['llvis'])))
+        foo_out['sigmaCF'] = 0.5*(foo_out['cfrac'])*np.sqrt(1./foo['llsnr']**2 + 1./foo['rrsnr']**2 + 1./foo['lrsnr']**2 + 1./foo['rlsnr']**2)
+    return foo_out
 
+    
 def make_df_full_cp(obs,round_s=0.1):
 
     """converts visibilities from obs.data to DataFrame format
@@ -369,7 +450,7 @@ def round_time(t,round_s=0.1):
     return round_t
 
 
-def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],get_pol=['LL','RR'],min_elem=100.,cadence=-1,polrep='stokes'):
+def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF'],get_pol=['LL','RR'],min_elem=100.,cadence=-1,polrep='circ'):
 
     if get_pol==None: get_pol=[None]
     for pol in get_pol:
@@ -384,7 +465,7 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
                 os.makedirs(path_out+'AMP') 
             baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
             for base in baseL:
-                tser = tseries(tobs,base)
+                tser = tseries(tobs,base,product='amp')
                 if len(tser.mjd)>min_elem:
                     tser.save_csv(path_out+'AMP/'+special_name+'_'+tser.source+'_'+base+'_'+pol+'.csv')
 
@@ -394,7 +475,7 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
                 os.makedirs(path_out+'CP') 
             triangleL=sorted([x[0]+x[1]+x[2] for x in itertools.combinations(stations,3)])
             for tri in triangleL:
-                tser = tseries(tobs,tri)
+                tser = tseries(tobs,tri,product='cphase')
                 if len(tser.mjd)>min_elem:
                     tser.save_csv(path_out+'CP/'+special_name+'_'+tser.source+'_'+tri+'_'+pol+'.csv')
 
@@ -406,6 +487,26 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA'],ge
             quadrangleL2=sorted([x[0]+x[3]+x[1]+x[2] for x in itertools.combinations(stations,4)])
             quadrangleL=quadrangleL1+quadrangleL2
             for quad in quadrangleL:
-                tser = tseries(tobs,quad)
+                tser = tseries(tobs,quad,product='lcamp')
                 if len(tser.mjd)>min_elem:
                     tser.save_csv(path_out+'LCA/'+special_name+'_'+tser.source+'_'+quad+'_'+pol+'.csv')
+        
+        if 'LCF' in get_what:
+            print('Saving log closure fracpol time series...')
+            if not os.path.exists(path_out+'LCF'):
+                os.makedirs(path_out+'LCF') 
+            baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
+            for base in baseL:
+                tser = tseries(tobs,base,product='lcfrac')
+                if len(tser.mjd)>min_elem:
+                    tser.save_csv(path_out+'LCF/'+special_name+'_'+tser.source+'_'+base+'.csv')
+
+        if 'CF' in get_what:
+            print('Saving closure fracpol time series...')
+            if not os.path.exists(path_out+'CF'):
+                os.makedirs(path_out+'CF') 
+            baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
+            for base in baseL:
+                tser = tseries(tobs,base,product='cfrac')
+                if len(tser.mjd)>min_elem:
+                    tser.save_csv(path_out+'CF/'+special_name+'_'+tser.source+'_'+base+'.csv')
