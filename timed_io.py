@@ -511,7 +511,7 @@ def round_time(t,round_s=0.1):
     return round_t
 
 
-def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF'],get_pol=['LL','RR'],min_elem=100.,cadence=-1,polrep='circ'):
+def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF'],get_pol=['LL','RR'],min_elem=100.,cadence=-1,polrep='circ',columns='default'):
 
     if get_pol==None: get_pol=[None]
     for pol in get_pol:
@@ -531,7 +531,7 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF
             for base in baseL:
                 tser = tseries(tobs,base,product='amp')
                 if len(tser.mjd)>min_elem:
-                    tser.save_csv(path_out+'AMP/'+special_name+'_'+tser.source+'_'+base+'_'+pol+'.csv')
+                    tser.save_csv(path_out+'AMP/'+special_name+'_'+tser.source+'_'+base+'_'+pol+'.csv',columns=columns)
 
         if 'CP' in get_what:
             print('Saving closure phase time series...')
@@ -541,7 +541,7 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF
             for tri in triangleL:
                 tser = tseries(tobs,tri,product='cphase')
                 if len(tser.mjd)>min_elem:
-                    tser.save_csv(path_out+'CP/'+special_name+'_'+tser.source+'_'+tri+'_'+pol+'.csv')
+                    tser.save_csv(path_out+'CP/'+special_name+'_'+tser.source+'_'+tri+'_'+pol+'.csv',columns=columns)
 
         if 'LCA' in get_what:
             print('Saving log closure amplitude time series...')
@@ -553,7 +553,7 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF
             for quad in quadrangleL:
                 tser = tseries(tobs,quad,product='lcamp')
                 if len(tser.mjd)>min_elem:
-                    tser.save_csv(path_out+'LCA/'+special_name+'_'+tser.source+'_'+quad+'_'+pol+'.csv')
+                    tser.save_csv(path_out+'LCA/'+special_name+'_'+tser.source+'_'+quad+'_'+pol+'.csv',columns=columns)
         
         if 'LCF' in get_what:
             print('Saving log closure fracpol time series...')
@@ -564,7 +564,7 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF
             for base in baseL:
                 tser = tseries(tobs,base,product='lcfrac')
                 if len(tser.mjd)>min_elem:
-                    tser.save_csv(path_out+'LCF/'+special_name+'_'+tser.source+'_'+base+'.csv')
+                    tser.save_csv(path_out+'LCF/'+special_name+'_'+tser.source+'_'+base+'.csv',columns=columns)
 
         if 'CF' in get_what:
             print('Saving closure fracpol time series...')
@@ -578,4 +578,4 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF
                 tser = tseries(tobs,base,product='cfrac')
                 #print(base,np.shape(tser.data))
                 if len(tser.mjd)>min_elem:
-                    tser.save_csv(path_out+'CF/'+special_name+'_'+tser.source+'_'+base+'.csv')
+                    tser.save_csv(path_out+'CF/'+special_name+'_'+tser.source+'_'+base+'.csv',columns=columns)
