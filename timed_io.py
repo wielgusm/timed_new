@@ -50,6 +50,10 @@ def load_uvfits(path_to_data,tcoh=-1,single_letter=True,polrep='circ',polar=None
     tobs=tobsdata(obs,single_letter=single_letter)
     return tobs
 
+#def load_csv(path_to_data, product, columns=None):
+
+
+
 class tobsdata:
     def __init__(self,obs,single_letter=True):
         try: self.df=obs.df
@@ -73,13 +77,30 @@ class tobsdata:
     def get_tseries(self,ident,product='',polar='none'):
         return tseries(self,ident,product=product,polar=polar) 
     
+class fake_tobs:
+    def __init__(self,**kwargs):
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
+        try: foo = self.source
+        except AttributeError: self.source='source'
+        try: foo = self.ra
+        except AttributeError: self.ra=0
+        try: foo = self.dec
+        except AttributeError: self.dec=0
+              
+
 class tseries:
-    def __init__(self,tobs,ident,product='',polar='none'):      
+    def __init__(self,tobs,ident,product='',polar='none',csv_path='',csv_columns=None,csv_product=None,**kwargs):     
+        if product=='csv':
+            tobs = fake_tobs(**kwargs)
+            foo = pd.read_csv(csv_path,names=csv_columns)
         if product=='':
             if len(ident)==2: product='amp'
             elif len(ident)==3: product='cphase'
             elif len(ident)==4: product='lcamp'
-        self.type = product
+        self.product=product
+        if product=='csv':
+            self.type=csv_product
         self.ident = ident
         self.polarization = polar
         self.source = tobs.source
@@ -137,6 +158,13 @@ class tseries:
             self.sigmaCF = np.asarray(foo.sigmaCF)
             self.data = foo
 
+        elif product=='csv':    
+            for col in csv_columns:
+                setattr(self, col, foo[col])
+            self.data = foo
+            try: goo=self.time
+            except AttributeError: self.time=self.mjd
+
     def plot(self,line=False,figsize='',errorscale=1.):
         if figsize=='':
             plt.figure(figsize=(10,5))
@@ -159,6 +187,38 @@ class tseries:
             plt.ylabel('log cfracpol')
         elif self.type=='cfrac':
             plt.errorbar(self.time,self.cfrac,errorscale*self.sigmaCF,fmt=fmt,capsize=5)
+            plt.ylabel('cfracpol')
+        plt.grid()
+        plt.xlabel('time [h]')
+        plt.show()
+
+    def plot_compare(self,tser,line=False,figsize='',errorscale=1.):
+        if figsize=='':
+            plt.figure(figsize=(10,5))
+        else:
+            plt.figure(figsize=figsize)
+        if line: fmt='o-'
+        else: fmt='o'
+        plt.title(self.ident)
+        if self.type=='cphase':
+            plt.errorbar(self.time,self.cphase,errorscale*self.sigmaCP,fmt=fmt,capsize=5)
+            plt.errorbar(tser.time,tser.cphase,errorscale*tser.sigmaCP,fmt=fmt,capsize=5)
+            plt.ylabel('cphase [deg]')
+        elif self.type=='amp':
+            plt.errorbar(self.time,self.amp,errorscale*self.sigma,fmt=fmt,capsize=5)
+            plt.errorbar(tser.time,tser.amp,errorscale*tser.sigma,fmt=fmt,capsize=5)
+            plt.ylabel('amp')
+        elif self.type=='lcamp':
+            plt.errorbar(self.time,self.lcamp,errorscale*self.sigmaLCA,fmt=fmt,capsize=5)
+            plt.errorbar(tser.time,tser.lcamp,errorscale*tser.sigmaLCA,fmt=fmt,capsize=5)
+            plt.ylabel('log camp')
+        elif self.type=='lcfrac':
+            plt.errorbar(self.time,self.lcfrac,errorscale*self.sigmaLCF,fmt=fmt,capsize=5)
+            plt.errorbar(tser.time,tser.lcfrac,errorscale*tser.sigmaLCF,fmt=fmt,capsize=5)
+            plt.ylabel('log cfracpol')
+        elif self.type=='cfrac':
+            plt.errorbar(self.time,self.cfrac,errorscale*self.sigmaCF,fmt=fmt,capsize=5)
+            plt.errorbar(tser.time,tser.cfrac,errorscale*tser.sigmaCF,fmt=fmt,capsize=5)
             plt.ylabel('cfracpol')
         plt.grid()
         plt.xlabel('time [h]')
@@ -332,8 +392,9 @@ def get_lcamp(tobs,quadrangle,polar='none'):
     return foo_out
 
 def get_lcfrac(tobs,baseline):
-   
+    
     baseL=list(tobs.df.baseline.unique())
+    #print(baseL)
     if baseline not in baseL:
         if baseline[1]+baseline[0] in baseL:
             print('Using transposed baseline')
@@ -458,12 +519,15 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF
         if pol==None: pol=''
         stations = list(set(''.join(tobs.df.baseline)))
         stations = [x for x in stations if x!='R']
+        #print(stations)
+        #print(tobs.baseline.unique())
 
         if 'AMP' in get_what:
             print('Saving visibility amplitudes time series...')
             if not os.path.exists(path_out+'AMP'):
                 os.makedirs(path_out+'AMP') 
-            baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
+            #baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
+            baseL = tobs.df.baseline.unique()
             for base in baseL:
                 tser = tseries(tobs,base,product='amp')
                 if len(tser.mjd)>min_elem:
@@ -495,7 +559,8 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF
             print('Saving log closure fracpol time series...')
             if not os.path.exists(path_out+'LCF'):
                 os.makedirs(path_out+'LCF') 
-            baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
+            baseL = tobs.df.baseline.unique()
+            baseL = [base for base in baseL if 'R' not in base]
             for base in baseL:
                 tser = tseries(tobs,base,product='lcfrac')
                 if len(tser.mjd)>min_elem:
@@ -505,8 +570,12 @@ def save_all_products(pathf,path_out,special_name,get_what=['AMP','CP','LCA','CF
             print('Saving closure fracpol time series...')
             if not os.path.exists(path_out+'CF'):
                 os.makedirs(path_out+'CF') 
-            baseL=sorted([x[0]+x[1] for x in itertools.combinations(stations,2)])
+            baseL = tobs.df.baseline.unique()
+            baseL = [base for base in baseL if 'R' not in base]
+            #print(baseL)
             for base in baseL:
+                #print('base ', base)
                 tser = tseries(tobs,base,product='cfrac')
+                #print(base,np.shape(tser.data))
                 if len(tser.mjd)>min_elem:
                     tser.save_csv(path_out+'CF/'+special_name+'_'+tser.source+'_'+base+'.csv')
