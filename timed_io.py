@@ -199,26 +199,26 @@ class tseries:
             plt.figure(figsize=figsize)
         if line: fmt='o-'
         else: fmt='o'
-        plt.title(self.ident)
+        plt.title(self.ident+' '+self.type)
         if self.type=='cphase':
-            plt.errorbar(self.time,self.cphase,errorscale*self.sigmaCP,fmt=fmt,capsize=5)
-            plt.errorbar(tser.time,tser.cphase,errorscale*tser.sigmaCP,fmt=fmt,capsize=5)
+            plt.errorbar(self.time,self.cphase,errorscale*self.sigmaCP,fmt=fmt,capsize=5,label=self.ident)
+            plt.errorbar(tser.time,tser.cphase,errorscale*tser.sigmaCP,fmt=fmt,capsize=5,label=tser.ident)
             plt.ylabel('cphase [deg]')
         elif self.type=='amp':
-            plt.errorbar(self.time,self.amp,errorscale*self.sigma,fmt=fmt,capsize=5)
-            plt.errorbar(tser.time,tser.amp,errorscale*tser.sigma,fmt=fmt,capsize=5)
+            plt.errorbar(self.time,self.amp,errorscale*self.sigma,fmt=fmt,capsize=5,label=self.ident)
+            plt.errorbar(tser.time,tser.amp,errorscale*tser.sigma,fmt=fmt,capsize=5,label=tser.ident)
             plt.ylabel('amp')
         elif self.type=='lcamp':
-            plt.errorbar(self.time,self.lcamp,errorscale*self.sigmaLCA,fmt=fmt,capsize=5)
-            plt.errorbar(tser.time,tser.lcamp,errorscale*tser.sigmaLCA,fmt=fmt,capsize=5)
+            plt.errorbar(self.time,self.lcamp,errorscale*self.sigmaLCA,fmt=fmt,capsize=5,label=self.ident)
+            plt.errorbar(tser.time,tser.lcamp,errorscale*tser.sigmaLCA,fmt=fmt,capsize=5,label=tser.ident)
             plt.ylabel('log camp')
         elif self.type=='lcfrac':
-            plt.errorbar(self.time,self.lcfrac,errorscale*self.sigmaLCF,fmt=fmt,capsize=5)
-            plt.errorbar(tser.time,tser.lcfrac,errorscale*tser.sigmaLCF,fmt=fmt,capsize=5)
+            plt.errorbar(self.time,self.lcfrac,errorscale*self.sigmaLCF,fmt=fmt,capsize=5,label=self.ident)
+            plt.errorbar(tser.time,tser.lcfrac,errorscale*tser.sigmaLCF,fmt=fmt,capsize=5,label=tser.ident)
             plt.ylabel('log cfracpol')
         elif self.type=='cfrac':
-            plt.errorbar(self.time,self.cfrac,errorscale*self.sigmaCF,fmt=fmt,capsize=5)
-            plt.errorbar(tser.time,tser.cfrac,errorscale*tser.sigmaCF,fmt=fmt,capsize=5)
+            plt.errorbar(self.time,self.cfrac,errorscale*self.sigmaCF,fmt=fmt,capsize=5,label=self.ident)
+            plt.errorbar(tser.time,tser.cfrac,errorscale*tser.sigmaCF,fmt=fmt,capsize=5,label=tser.ident)
             plt.ylabel('cfracpol')
         plt.grid()
         plt.xlabel('time [h]')
