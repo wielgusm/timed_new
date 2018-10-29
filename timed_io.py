@@ -222,6 +222,7 @@ class tseries:
             plt.ylabel('cfracpol')
         plt.grid()
         plt.xlabel('time [h]')
+        plt.legend()
         plt.show()
 
     def hist(self,figsize='',perc=2.,show_normal=True):
