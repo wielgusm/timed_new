@@ -243,7 +243,7 @@ class tseries:
                 plt.errorbar(tser.time,tser.cphase,errorscale*tser.sigmaCP,fmt=fmt,capsize=5,label=labelsL[cou+1])
             plt.ylabel('cphase [deg]')
         elif self.type=='amp':
-            plt.errorbar(self.time,self.amp,errorscale*self.sigma,fmt=fmt,capsize=5,label=label=labelsL[0])
+            plt.errorbar(self.time,self.amp,errorscale*self.sigma,fmt=fmt,capsize=5,label=labelsL[0])
             for tser,cou in enumerate(tserL):
                 plt.errorbar(tser.time,tser.lcamp,errorscale*tser.sigmaLCA,fmt=fmt,capsize=5,label=labelsL[cou+1])
             plt.ylabel('amp')
