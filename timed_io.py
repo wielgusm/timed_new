@@ -165,14 +165,14 @@ class tseries:
             try: goo=self.time
             except AttributeError: self.time=self.mjd
 
-    def plot(self,line=False,figsize='',errorscale=1.):
+    def plot(self,line=False,figsize='',errorscale=1.,add_title=''):
         if figsize=='':
             plt.figure(figsize=(10,5))
         else:
             plt.figure(figsize=figsize)
         if line: fmt='o-'
         else: fmt='o'
-        plt.title(self.ident)
+        plt.title(self.ident+' '+self.type+' '+add_title)
         if self.type=='cphase':
             plt.errorbar(self.time,self.cphase,errorscale*self.sigmaCP,fmt=fmt,capsize=5)
             plt.ylabel('cphase [deg]')
@@ -192,14 +192,14 @@ class tseries:
         plt.xlabel('time [h]')
         plt.show()
 
-    def plot_compare(self,tser,line=False,figsize='',errorscale=1.):
+    def plot_compare(self,tser,line=False,figsize='',errorscale=1.,add_title=''):
         if figsize=='':
             plt.figure(figsize=(10,5))
         else:
             plt.figure(figsize=figsize)
         if line: fmt='o-'
         else: fmt='o'
-        plt.title(self.ident+' '+self.type)
+        plt.title(self.ident+' '+self.type+' '+add_title)
         if self.type=='cphase':
             plt.errorbar(self.time,self.cphase,errorscale*self.sigmaCP,fmt=fmt,capsize=5,label=self.ident)
             plt.errorbar(tser.time,tser.cphase,errorscale*tser.sigmaCP,fmt=fmt,capsize=5,label=tser.ident)
@@ -224,6 +224,49 @@ class tseries:
         plt.xlabel('time [h]')
         plt.legend()
         plt.show()
+
+
+    def plot_compare_list(self,tserL,line=False,figsize='',errorscale=1.,add_title='',labelsL=None):
+        if figsize=='':
+            plt.figure(figsize=(10,5))
+        else:
+            plt.figure(figsize=figsize)
+        if line: fmt='o-'
+        else: fmt='o'
+        if labelsL==None:
+            labelsL0 = [tser.ident for tser in tserL]
+            labelsL=[self.ident]+labelsL0
+        plt.title(self.ident+' '+self.type+' '+add_title)
+        if self.type=='cphase':
+            plt.errorbar(self.time,self.cphase,errorscale*self.sigmaCP,fmt=fmt,capsize=5,label=labelsL[0])
+            for tser,cou in enumerate(tserL):
+                plt.errorbar(tser.time,tser.cphase,errorscale*tser.sigmaCP,fmt=fmt,capsize=5,label=labelsL[cou+1])
+            plt.ylabel('cphase [deg]')
+        elif self.type=='amp':
+            plt.errorbar(self.time,self.amp,errorscale*self.sigma,fmt=fmt,capsize=5,label=label=labelsL[0])
+            for tser,cou in enumerate(tserL):
+                plt.errorbar(tser.time,tser.lcamp,errorscale*tser.sigmaLCA,fmt=fmt,capsize=5,label=labelsL[cou+1])
+            plt.ylabel('amp')
+        elif self.type=='lcamp':
+            plt.errorbar(self.time,self.lcamp,errorscale*self.sigmaLCA,fmt=fmt,capsize=5,label=labelsL[0])
+            for tser,cou in enumerate(tserL):
+                plt.errorbar(tser.time,tser.lcamp,errorscale*tser.sigmaLCA,fmt=fmt,capsize=5,label=labelsL[cou+1])
+            plt.ylabel('log camp')
+        elif self.type=='lcfrac':
+            plt.errorbar(self.time,self.lcfrac,errorscale*self.sigmaLCF,fmt=fmt,capsize=5,label=labelsL[0])
+            for tser,cou in enumerate(tserL):
+                plt.errorbar(tser.time,tser.lcfrac,errorscale*tser.sigmaLCF,fmt=fmt,capsize=5,label=labelsL[cou+1])
+            plt.ylabel('log cfracpol')
+        elif self.type=='cfrac':
+            plt.errorbar(self.time,self.cfrac,errorscale*self.sigmaCF,fmt=fmt,capsize=5,label=labelsL[0])
+            for tser,cou in enumerate(tserL):
+                plt.errorbar(tser.time,tser.cfrac,errorscale*tser.sigmaCF,fmt=fmt,capsize=5,label=labelsL[cou+1])
+            plt.ylabel('cfracpol')
+        plt.grid()
+        plt.xlabel('time [h]')
+        plt.legend()
+        plt.show()
+
 
     def hist(self,figsize='',perc=2.,show_normal=True):
         if figsize=='':
