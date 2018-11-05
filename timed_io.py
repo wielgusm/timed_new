@@ -450,6 +450,13 @@ def get_lcfrac(tobs,baseline):
         foo_out=foo[['time','datetime','mjd']].copy()
         foo_out['u'] = np.asarray(foo['u'])
         foo_out['v'] = np.asarray(foo['v'])
+        debias=True
+        if debias==True:
+            foo['rlvis'] = foo['rlvis']*np.sqrt(np.abs(foo['rlvis'])**2 - np.abs(foo['rlsigma'])**2)/np.abs(foo['rlvis'])
+            foo['lrvis'] = foo['lrvis']*np.sqrt(np.abs(foo['lrvis'])**2 - np.abs(foo['lrsigma'])**2)/np.abs(foo['lrvis'])
+            foo['rrvis'] = foo['rrvis']*np.sqrt(np.abs(foo['rrvis'])**2 - np.abs(foo['rrsigma'])**2)/np.abs(foo['rrvis'])
+            foo['llvis'] = foo['llvis']*np.sqrt(np.abs(foo['llvis'])**2 - np.abs(foo['llsigma'])**2)/np.abs(foo['llvis'])
+
         foo_out['lcfrac'] = np.log(np.abs(foo['rlvis'])) + np.log(np.abs(foo['lrvis'])) - np.log(np.abs(foo['rrvis'])) - np.log(np.abs(foo['llvis']))
         foo_out['sigmaLCF'] = np.sqrt(1./foo['llsnr']**2 + 1./foo['rrsnr']**2 + 1./foo['lrsnr']**2 + 1./foo['rlsnr']**2)
     return foo_out
@@ -468,6 +475,13 @@ def get_cfrac(tobs,baseline):
         foo_out=foo[['time','datetime','mjd']].copy()
         foo_out['u'] = np.asarray(foo['u'])
         foo_out['v'] = np.asarray(foo['v'])
+        debias=True
+        if debias==True:
+            foo['rlvis'] = foo['rlvis']*np.sqrt(np.abs(foo['rlvis'])**2 - np.abs(foo['rlsigma'])**2)/np.abs(foo['rlvis'])
+            foo['lrvis'] = foo['lrvis']*np.sqrt(np.abs(foo['lrvis'])**2 - np.abs(foo['lrsigma'])**2)/np.abs(foo['lrvis'])
+            foo['rrvis'] = foo['rrvis']*np.sqrt(np.abs(foo['rrvis'])**2 - np.abs(foo['rrsigma'])**2)/np.abs(foo['rrvis'])
+            foo['llvis'] = foo['llvis']*np.sqrt(np.abs(foo['llvis'])**2 - np.abs(foo['llsigma'])**2)/np.abs(foo['llvis'])
+
         foo_out['cfrac'] = np.sqrt((np.abs(foo['rlvis']))*(np.abs(foo['lrvis']))/(np.abs(foo['rrvis']))/(np.abs(foo['llvis'])))
         foo_out['sigmaCF'] = 0.5*(foo_out['cfrac'])*np.sqrt(1./foo['llsnr']**2 + 1./foo['rrsnr']**2 + 1./foo['lrsnr']**2 + 1./foo['rlsnr']**2)
     return foo_out
