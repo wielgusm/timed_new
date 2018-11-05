@@ -226,7 +226,7 @@ class tseries:
         plt.show()
 
 
-    def plot_compare_list(self,tserL,line=False,figsize='',errorscale=1.,add_title='',labelsL=None,err_cut=1e5):
+    def plot_compare_list(self,tserL,line=False,figsize='',errorscale=1.,add_title='',labelsL=None,err_cut=1e5,xrange=None,yrange=None):
         if figsize=='':
             plt.figure(figsize=(10,5))
         else:
@@ -264,6 +264,10 @@ class tseries:
             plt.ylabel('cfracpol')
         plt.grid()
         plt.xlabel('time [h]')
+        if yrange!=None:
+            plt.ylim(yrange)
+        if xrange!=None:
+            plt.xlim(xrange)
         plt.legend()
         plt.show()
 
