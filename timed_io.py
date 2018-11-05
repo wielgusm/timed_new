@@ -226,7 +226,7 @@ class tseries:
         plt.show()
 
 
-    def plot_compare_list(self,tserL,line=False,figsize='',errorscale=1.,add_title='',labelsL=None):
+    def plot_compare_list(self,tserL,line=False,figsize='',errorscale=1.,add_title='',labelsL=None,err_cut=1e5):
         if figsize=='':
             plt.figure(figsize=(10,5))
         else:
@@ -238,29 +238,29 @@ class tseries:
             labelsL=[self.ident]+labelsL0
         plt.title(self.ident+' '+self.type+' '+add_title)
         if self.type=='cphase':
-            plt.errorbar(self.time,self.cphase,errorscale*self.sigmaCP,fmt=fmt,capsize=5,label=labelsL[0])
+            plt.errorbar(self.time[self.sigmaCP<err_cut],self.cphase[self.sigmaCP<err_cut],errorscale*self.sigmaCP[self.sigmaCP<err_cut],fmt=fmt,capsize=5,label=labelsL[0])
             for cou,tser in enumerate(tserL):
-                plt.errorbar(tser.time,tser.cphase,errorscale*tser.sigmaCP,fmt=fmt,capsize=5,label=labelsL[cou+1])
+                plt.errorbar(tser.time[tser.sigmaCP<err_cut],tser.cphase[tser.sigmaCP<err_cut],errorscale*tser.sigmaCP[tser.sigmaCP<err_cut],fmt=fmt,capsize=5,label=labelsL[cou+1])
             plt.ylabel('cphase [deg]')
         elif self.type=='amp':
-            plt.errorbar(self.time,self.amp,errorscale*self.sigma,fmt=fmt,capsize=5,label=labelsL[0])
+            plt.errorbar(self.time[self.sigma<err_cut],self.amp[self.sigma<err_cut],errorscale*self.sigma[self.sigma<err_cut],fmt=fmt,capsize=5,label=labelsL[0])
             for cou,tser in enumerate(tserL):
-                plt.errorbar(tser.time,tser.lcamp,errorscale*tser.sigmaLCA,fmt=fmt,capsize=5,label=labelsL[cou+1])
+                plt.errorbar(tser.time[tser.sigma<err_cut],tser.lcamp[tser.sigma<err_cut],errorscale*tser.sigma[tser.sigma<err_cut],fmt=fmt,capsize=5,label=labelsL[cou+1])
             plt.ylabel('amp')
         elif self.type=='lcamp':
-            plt.errorbar(self.time,self.lcamp,errorscale*self.sigmaLCA,fmt=fmt,capsize=5,label=labelsL[0])
+            plt.errorbar(self.time[self.sigmaLCA<err_cut],self.lcamp[self.sigmaLCA<err_cut],errorscale*self.sigmaLCA[self.sigmaLCA<err_cut],fmt=fmt,capsize=5,label=labelsL[0])
             for cou,tser in enumerate(tserL):
-                plt.errorbar(tser.time,tser.lcamp,errorscale*tser.sigmaLCA,fmt=fmt,capsize=5,label=labelsL[cou+1])
+                plt.errorbar(tser.time[tser.sigmaLCA<err_cut],tser.lcamp[tser.sigmaLCA<err_cut],errorscale*tser.sigmaLCA[tser.sigmaLCA<err_cut],fmt=fmt,capsize=5,label=labelsL[cou+1])
             plt.ylabel('log camp')
         elif self.type=='lcfrac':
-            plt.errorbar(self.time,self.lcfrac,errorscale*self.sigmaLCF,fmt=fmt,capsize=5,label=labelsL[0])
+            plt.errorbar(self.time[self.sigmaLCF<err_cut],self.lcfrac[self.sigmaLCF<err_cut],errorscale*self.sigmaLCF[self.sigmaLCF<err_cut],fmt=fmt,capsize=5,label=labelsL[0])
             for cou,tser in enumerate(tserL):
-                plt.errorbar(tser.time,tser.lcfrac,errorscale*tser.sigmaLCF,fmt=fmt,capsize=5,label=labelsL[cou+1])
+                plt.errorbar(tser.time[tser.sigmaLCF<err_cut],tser.lcfrac[tser.sigmaLCF<err_cut],errorscale*tser.sigmaLCF[tser.sigmaLCF<err_cut],fmt=fmt,capsize=5,label=labelsL[cou+1])
             plt.ylabel('log cfracpol')
         elif self.type=='cfrac':
-            plt.errorbar(self.time,self.cfrac,errorscale*self.sigmaCF,fmt=fmt,capsize=5,label=labelsL[0])
+            plt.errorbar(self.time[self.sigmaCF<err_cut],self.cfrac[self.sigmaCF<err_cut],errorscale*self.sigmaCF[self.sigmaCF<err_cut],fmt=fmt,capsize=5,label=labelsL[0])
             for cou,tser in enumerate(tserL):
-                plt.errorbar(tser.time,tser.cfrac,errorscale*tser.sigmaCF,fmt=fmt,capsize=5,label=labelsL[cou+1])
+                plt.errorbar(tser.time[tser.sigmaCF<err_cut],tser.cfrac[tser.sigmaCF<err_cut],errorscale*tser.sigmaCF[tser.sigmaCF<err_cut],fmt=fmt,capsize=5,label=labelsL[cou+1])
             plt.ylabel('cfracpol')
         plt.grid()
         plt.xlabel('time [h]')
